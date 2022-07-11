@@ -12,6 +12,8 @@ import com.rex.db.node.query.QueryError;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.listener.QueryEventListener;
 import java.util.HashMap;
+import java.util.Map;
+import org.json.JSONObject;
 import com.rex.db.node.example.R;
 
 public class MainActivity extends Activity {
@@ -31,39 +33,36 @@ public class MainActivity extends Activity {
 		final Button button3 = (Button) findViewById(R.id.button3);
 		NodeApp.initialize(this);
 
-		dB = new NodeDB("users");
+		dB = new NodeDB("users").orderByKey();
 		dB.addQueryEventListener(eventListener);
 		button1.setOnClickListener((v) -> {
 			HashMap<String, Object> map = new HashMap<>();
 			map.put("id", dB.getKey());
 			map.put("name", value.getText().toString());
 			map.put("age", key.getText().toString());
-			dB.put(map).push();
+			dB.child(map.get("id").toString()).put(map).push();
+			map.clear();
 		});
 
 		button2.setOnClickListener((v) -> {
-			dB.get(Integer.parseInt(key.getText().toString())).addValueEventListener(eventListener2);
+			
 		});
 
 		button3.setOnClickListener((v) -> {
-			dB.child(Integer.parseInt(key.getText().toString())).removeValue(value.getText().toString());
+			dB.delete();
 		});
 	}
 
 	private QueryEventListener eventListener = new QueryEventListener() {
 		@Override
 		public void onQuery(Query q) {
-			if (q.getQuery() != null) {
-				textView.setText(q.getQuery().toString());
-			} else {
-				textView.setText(q.getData().toString());
-			}
 			Toast.makeText(MainActivity.this, "New record added.", Toast.LENGTH_LONG).show();
+			textView.setText(q.getQuery().toString());
 		}
 
 		@Override
 		public void onError(QueryError e) {
-			Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_LONG).show();
+			Toast.makeText(MainActivity.this, "Query : " + e.toString(), Toast.LENGTH_LONG).show();
 		}
 
 	};
@@ -71,7 +70,7 @@ public class MainActivity extends Activity {
 	private QueryEventListener eventListener2 = new QueryEventListener() {
 		@Override
 		public void onQuery(Query query) {
-			HashMap<String, Object> map = query.getData();
+			Map map = (Map) query.getData();
 			textView.setText(map.get("name").toString());
 			Toast.makeText(MainActivity.this, "Record retreived.", Toast.LENGTH_LONG).show();
 		}
