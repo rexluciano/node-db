@@ -11,6 +11,7 @@ import com.rex.db.node.query.QueryError;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.listener.QueryEventListener;
 import java.util.HashMap;
+import com.rex.db.node.example.R;
 
 public class MainActivity extends Activity {
 
