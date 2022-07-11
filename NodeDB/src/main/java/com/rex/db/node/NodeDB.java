@@ -5,29 +5,39 @@ import android.os.Looper;
 import android.util.Log;
 import android.util.LogPrinter;
 import android.widget.Toast;
-import com.google.gson.reflect.TypeToken;
-import com.google.gson.Gson;
 import com.rex.db.node.listener.QueryEventListener;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.query.QueryError;
+import com.rex.db.node.query.SortingList;
 import com.rex.db.node.utils.FileUtil;
+import com.rex.db.node.utils.Utils;
 import java.io.File;
 import com.rex.db.node.NodeApp;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class NodeDB {
 
 	private String nodeName;
 	private String name;
-	private int id;
+	private String id = "";
 	private File dbPath;
 	private LogPrinter printer;
-	private ArrayList<HashMap<String, Object>> list = new ArrayList<>();
-	private ArrayList<HashMap<String, Object>> listAdd = new ArrayList<>();
+
+	private ArrayList<Object> list = new ArrayList<>();
 	private HashMap<String, Object> map = new HashMap<>();
+	private JSONObject object = new JSONObject();
+	private JSONObject data = new JSONObject();
+
 	private QueryEventListener listener = null;
 	private QueryEventListener mListener = null;
 	private Query q = new Query();
@@ -42,9 +52,7 @@ public class NodeDB {
 			if (dbPath.exists()) {
 				try {
 					refresh();
-					new Handler(Looper.getMainLooper()).postDelayed(() -> {
-						query();
-					}, 500);
+					new Handler(Looper.getMainLooper()).postDelayed(() -> query(), 200);
 				} catch (Exception exception) {
 					printer.println("NodeDB : " + exception.getLocalizedMessage());
 				}
@@ -58,33 +66,76 @@ public class NodeDB {
 	}
 
 	public NodeDB put(String key, Object value) {
-		map.put(key, value);
-		list.add(map);
+		try {
+			if (!id.trim().equalsIgnoreCase("")) {
+				data.put(key, value);
+				object.put(id, data);
+			} else {
+				object.put(getKey(), map);
+			}
+		} catch (JSONException e) {
+		}
+		list.add(object);
 		q.setData(list);
 		return this;
 	}
 
-	public NodeDB put(HashMap<String, Object> hashMap) {
-		list.add(hashMap);
+	public NodeDB put(Object hashMap) {
+		try {
+			if (!id.trim().equalsIgnoreCase("")) {
+				object.put(id, new JSONObject((Map) hashMap));
+			} else {
+				object.put(getKey(), new JSONObject((Map) hashMap));
+			}
+		} catch (JSONException e) {
+			qe.setError(e.getLocalizedMessage());
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
+		list.add(object);
 		q.setData(list);
 		return this;
 	}
 
 	public NodeDB push() {
-		FileUtil.writeFile(NodeApp.getPath().toString() + "/" + nodeName + ".node", new Gson().toJson(list).toString());
-		if (listener != null) {
-			listener.onQuery(q);
+		JSONObject output = new JSONObject();
+		JSONArray jSONArray = new JSONArray(list);
+		try {
+			output.put("nodes", jSONArray);
+			FileUtil.writeFile(NodeApp.getPath().toString() + "/" + nodeName + ".node", output.toString());
+			list.clear();
+			refresh();
+			if (listener != null) {
+				listener.onQuery(q);
+			}
+		} catch (JSONException e) {
+			qe.setError(e.getLocalizedMessage());
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
+		if (list.contains(id)) {
+			list.remove(id);
 		}
 		map.clear();
-		list.clear();
-		refresh();
 		return this;
 	}
 
 	private void refresh() {
-		list = new Gson().fromJson(FileUtil.readFile(dbPath.getAbsolutePath()),
-				new TypeToken<ArrayList<HashMap<String, Object>>>() {
-				}.getType());
+		try {
+			JSONObject input = new JSONObject(FileUtil.readFile(dbPath.getAbsolutePath()));
+			JSONArray jsonArray = input.getJSONArray("nodes");
+			list.clear();
+			for (int i = 0; i < jsonArray.length(); i++) {
+				list.add(jsonArray.get(i));
+			}
+		} catch (JSONException e) {
+			qe.setError(e.getLocalizedMessage());
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
 	}
 
 	public NodeDB query() {
@@ -95,7 +146,7 @@ public class NodeDB {
 			}
 		} catch (Exception e) {
 			printer.println("NodeDB Query Error : " + e.getLocalizedMessage());
-			qe.setError("No result found.");
+			qe.setError(e.getLocalizedMessage());
 			if (listener != null) {
 				listener.onError(qe);
 			}
@@ -107,17 +158,16 @@ public class NodeDB {
 		return list.size();
 	}
 
-	public NodeDB get(int id) {
+	public NodeDB get() {
 		HashMap<String, Object> map = new HashMap<>();
 		try {
-			map = new Gson().fromJson(new Gson().toJson(list.get(id)), new TypeToken<HashMap<String, Object>>() {
-			}.getType());
-			q2.setData(map);
+			JSONObject jSONObject = new JSONObject(list.get(list.indexOf(id)).toString());
+			q2.setData(jSONObject);
 			if (mListener != null) {
 				mListener.onQuery(q2);
 			}
 		} catch (Exception e) {
-			qe.setError(list.get(id).toString());
+			qe.setError("Specified id is not found.");
 			if (mListener != null) {
 				mListener.onError(qe);
 			}
@@ -125,22 +175,62 @@ public class NodeDB {
 		return this;
 	}
 
-	public String getKey() {
-		return String.valueOf((long) (list.size()));
+	public NodeDB orderByKey() {
+		Collections.reverse(list);
+		return this;
 	}
 
-	public String get() {
-		return new Gson().toJson(list).toString();
+	public String getKey() {
+		this.id = Utils.generateKey(7);
+		return id;
 	}
-	
-	public NodeDB child(int id) {
+
+	public String toString() {
+		return list.toString();
+	}
+
+	public NodeDB child(String id) {
 		this.id = id;
 		return this;
 	}
-	
-	public void removeValue(String value) {
-		list.get(id).remove(value);
+
+	public void remove(String value) {
+		list.remove(value);
 		push().refresh();
+	}
+
+	public void remove() {
+		list.remove(id);
+		push().refresh();
+	}
+
+	public void update(String key, String value) {
+		map.put(key, value);
+		try {
+			object.put(id, map);
+		} catch (JSONException e) {
+			qe.setError(e.getLocalizedMessage());
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
+		push().refresh();
+	}
+
+	public void update(HashMap<String, Object> map) {
+		try {
+			object.put(id, map);
+		} catch (JSONException e) {
+			qe.setError(e.getLocalizedMessage());
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
+		push().refresh();
+	}
+
+	public void delete() {
+		FileUtil.deleteFile(NodeApp.getPath().toString() + "/" + nodeName + ".node");
 	}
 
 	public void addQueryEventListener(QueryEventListener mQuery) {
