@@ -1,5 +1,5 @@
 # NodeDB - Android based NoSQL Database
-A NoSQL Android Database that provides scalable and easy queries for Android mobile Apps. It's based on File Storage System like MongoDB that store and retrieve data from your local device storage.
+NodeDB is an Android based NoSQL Database system that provides free, scalable easy and secure Data Management system for Android application. It's fast, easy, and scalable database to store, read, and manage data easily.
 
 ## Add NodeDB to your Android app.
 
