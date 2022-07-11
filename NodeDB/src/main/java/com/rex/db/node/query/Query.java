@@ -2,28 +2,36 @@ package com.rex.db.node.query;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class Query {
 
-	private ArrayList<HashMap<String, Object>> data;
-	private HashMap<String, Object> map;
+	private ArrayList<Object> data;
+	private Object map;
+	private String type;
 
 	public Query() {
 	}
 
-	public void setData(ArrayList<HashMap<String, Object>> data) {
+	public void setData(ArrayList<Object> data) {
 		this.data = data;
 	}
 
-	public void setData(HashMap<String, Object> map) {
+	public void setData(Object map) {
 		this.map = map;
 	}
 
-	public ArrayList<HashMap<String, Object>> getQuery() {
+	public ArrayList<Object> getQuery() {
 		return data;
 	}
 
-	public HashMap<String, Object> getData() {
+	public Object getData() {
 		return map;
 	}
+
+	public String toJson() {
+		return new JSONArray(data).toString();
+	}
+
 }
