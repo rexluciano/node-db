@@ -3,6 +3,32 @@ A NoSQL Android Database that provides scalable and easy queries for Android mob
 
 ## Add NodeDB to your Android app.
 
+### Add JitPack into your buidl.gradle
+
+```
+allprojects {
+
+		repositories {
+
+			...
+
+			maven { url 'https://jitpack.io' }
+
+		}
+
+	}
+```
+
+### Add NodeDB dependency
+
+```
+dependencies {
+
+	        implementation 'com.github.rexllc:node-db:1.0.0-beta'
+
+	}
+```
+
 Initialize NodeApp before using and working on it.
 ```
 NodeApp.initialize(this);
