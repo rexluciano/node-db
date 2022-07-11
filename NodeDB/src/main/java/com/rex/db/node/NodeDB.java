@@ -8,7 +8,6 @@ import android.widget.Toast;
 import com.rex.db.node.listener.QueryEventListener;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.query.QueryError;
-import com.rex.db.node.query.SortingList;
 import com.rex.db.node.utils.FileUtil;
 import com.rex.db.node.utils.Utils;
 import java.io.File;
