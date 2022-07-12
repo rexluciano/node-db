@@ -1,53 +1,45 @@
 # NodeDB - Android based NoSQL Database
-NodeDB is an Android based NoSQL Database system that provides free, scalable easy and secure Data Management system for Android application. It's fast, easy, and scalable database to store, read, and manage data easily.
+A NoSQL Android Database system that aims to be a fast, and lightweight SQL library for Android.
 
-## Add NodeDB to your Android app.
-
-### Add JitPack into your buidl.gradle
-
-```
-allprojects {
-
-		repositories {
-
-			...
-
-			maven { url 'https://jitpack.io' }
-
-		}
-
-	}
-```
-
-### Add NodeDB dependency
+## NodeDB Android
+Add NodeDB dependency into your build.gradle
 
 ```
 dependencies {
 
-	        implementation 'com.github.rexllc:node-db:1.0.0-beta'
+	     implementation 'com.github.rexllc:node-db:1.0.3-beta'
 
 	}
 ```
-
-Initialize NodeApp before using and working on it.
+## Initialize NodeApp
+You need to initialize the system before performing any queries, or adding data to your database.
 ```
 NodeApp.initialize(this);
 ```
-## Create or Read Database
-To start adding data to your database, you need specify it. It will created if not exists.
+## Create Database
+To start adding data to your database, you need to create it first. If exist it will read all data from that database.
 ```
 NodeDB db = new NodeDB("name");
 ```
 
-## Add data to the database
+## Adding data to the database
 ```
 HashMap<String, Object> map = new HashMap<>();
-map.put("id", db.getKey());
+map.put("uid", uid);
 map.put("name", "John");
 map.put("surname", "Doe");
 map.put("age", "20");
-//Then push the data and refresh the table.
-db.put(map).push();
+db.put(map).prepare().push();
+```
+
+Or alternatively, you can use default NodeDB method
+
+```
+db.put("uid", uid);
+db.put("name", "John");
+db.put("surname", "Doe");
+db.put("age", "20");
+db.prepare().push();
 ```
 
 ## Add the listener
@@ -64,9 +56,9 @@ eventListener = new QueryEventListener() {
      @Override
      public void onQuery(Query query) {
        //For getting single value
-       HashMap<String, Object> map = query.getData();
+       Map map = (Map) query.getData();
        //For getting all list.
-       ArrayList<HashMap<String, Object> list = query.getQuery();
+       String  list = query.getQuery().toString();
      }
      
      @Override
@@ -75,8 +67,8 @@ eventListener = new QueryEventListener() {
 ```
 ## Get single value from the database
 To get value from the database with the specific key.
-Use `db.get((int)id).addValueEventListener(eventListener);`
-it will retrieve all associates records to the id.
+Use `db.child(id).get().addValueEventListener(eventListener);`
+it will retrieve all associates records to that id.
 Like
 ```
 {
@@ -84,9 +76,22 @@ Like
   ...
 }
 ```
-## Delete value from the database
-You can also remove a specific value in the table.
+## Delete data from the database
+You can also remove a specific data in the table.
 ```
-db.child(id).removeValue("value");
+db.child(id).remove();
 ```
-All ids are integer, and don't use String as key/id.
+## Updating data
+```
+db.child(id).update(map).prepare().push();
+```
+## Or
+```
+db.child(id).update("name", "John").prepare().push();
+```
+## Delete your database
+NodeDB have special method that when you call it will delete your current database instantly.
+```
+db.delete();
+```
+Deleting your database isn't recoverable. So, do at your own risk.
