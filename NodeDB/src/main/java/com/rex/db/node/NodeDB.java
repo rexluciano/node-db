@@ -4,7 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.util.LogPrinter;
-import android.widget.Toast;
 import com.rex.db.node.listener.QueryEventListener;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.query.QueryError;
@@ -31,8 +30,10 @@ public class NodeDB {
 	private String id = "";
 	private File dbPath;
 	private LogPrinter printer;
+	private boolean isDescending;
 
 	private ArrayList<Object> list = new ArrayList<>();
+	private List<String> listStr = new ArrayList<>();
 	private HashMap<String, Object> map = new HashMap<>();
 	private JSONObject object = new JSONObject();
 	private JSONObject data = new JSONObject();
@@ -75,6 +76,11 @@ public class NodeDB {
 			hashMap.remove("id");
 		}
 		map.putAll(hashMap);
+		return this;
+	}
+
+	public NodeDB put(NodeObject object) {
+		map.put(object.key, object.value);
 		return this;
 	}
 
@@ -125,7 +131,9 @@ public class NodeDB {
 			JSONArray jsonArray = input.getJSONArray(nodeName.replace("", "").trim());
 			list.clear();
 			for (int i = 0; i < jsonArray.length(); i++) {
+				JSONObject ob1 = jsonArray.getJSONObject(i);
 				list.add(jsonArray.get(i));
+				listStr.add(ob1.getString("id"));
 			}
 		} catch (JSONException e) {
 			qe.setError(e.getLocalizedMessage());
@@ -137,6 +145,10 @@ public class NodeDB {
 
 	protected NodeDB query() {
 		try {
+			if (isDescending) {
+				Collections.reverse(list);
+				Collections.reverse(listStr);
+			}
 			q.setData(list);
 			if (listener != null) {
 				listener.onQuery(q);
@@ -157,13 +169,15 @@ public class NodeDB {
 
 	public NodeDB get() {
 		try {
-			JSONObject jSONObject = new JSONObject(list.get(Utils.getIndexOf(list, id)).toString());
-			q2.setData(jSONObject);
+			JSONArray arr = new JSONArray(list);
+			JSONObject j = arr.getJSONObject(Utils.getIndexOf(listStr, id));
+			Map<String, Object> hash = Utils.toMap(j);
+			q2.setData(hash);
 			if (mListener != null) {
 				mListener.onQuery(q2);
 			}
 		} catch (Exception e) {
-			qe.setError("Specified id is not found.");
+			qe.setError("Specified key is not found.");
 			if (mListener != null) {
 				mListener.onError(qe);
 			}
@@ -171,8 +185,8 @@ public class NodeDB {
 		return this;
 	}
 
-	public NodeDB reverseOrder() {
-		Collections.reverse(list);
+	public NodeDB setDesc(boolean value) {
+		this.isDescending = value;
 		return this;
 	}
 
@@ -190,48 +204,42 @@ public class NodeDB {
 		return this;
 	}
 
-    @SuppressWarnings("Depreciated")
-	public void remove(String value) {
-		list.remove(value);
-		push().refresh();
+	public void remove(String key) {
+		JSONArray array2 = new JSONArray(list);
+		try {
+			JSONObject ub = array2.getJSONObject(Utils.getIndexOf(listStr, id));
+			ub.remove(key);
+			list.add(array2.toString());
+			push().refresh();
+		} catch (JSONException e) {
+			qe.setError("Requested value doesn\'t exist at the table.");
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
 	}
 
 	public void remove() {
-		if (Utils.getIndexOf(list, id) != -1) {
-			list.remove(Utils.getIndexOf(list, id));
+		if (Utils.getIndexOf(listStr, id) != -1) {
+			list.remove(Utils.getIndexOf(listStr, id));
 			push().refresh();
 		} else {
-			qe.setError("Data doesn\'t exist at the table.");
+			qe.setError("Requested value doesn\'t exist at the table.");
 			if (listener != null) {
 				listener.onError(qe);
 			}
 		}
 	}
 
-	public void update(String key, String value) {
+	public NodeDB update(NodeObject ob) {
+		array = new JSONArray(list);
 		try {
-			if (key.equals("id")) {
-				map.put("id", value.replace(value, id));
-			} else {
-				map.put("id", id);
-			}
-		} catch (Exception e) {
-			qe.setError(e.getLocalizedMessage());
-			if (listener != null) {
-				listener.onError(qe);
-			}
+			JSONObject u = array.getJSONObject(Utils.getIndexOf(listStr, id));
+			u.put(ob.key, ob.value);
+			list.add(array.toString());
+		} catch (JSONException e) {
 		}
-		map.put(key, value);
-		push().refresh();
-	}
-
-	public void update(HashMap<String, Object> map2) {
-		if (map2.containsKey("id")) {
-			map2.remove("id");
-		}
-		map.put("id", id);
-		map.putAll(map2);
-		push().refresh();
+		return this;
 	}
 
 	public void delete() {
