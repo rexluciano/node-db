@@ -9,7 +9,7 @@ Add NodeDB dependency into your build.gradle
 ```
 dependencies {
 
-	     implementation 'com.github.rexllc:node-db:1.0.4-beta'
+	     implementation 'com.github.rexllc:node-db:1.0.5-beta'
 
 	}
 ```
