@@ -8,11 +8,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.rex.db.node.NodeApp;
 import com.rex.db.node.NodeDB;
+import com.rex.db.node.NodeObject;
 import com.rex.db.node.query.QueryError;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.listener.QueryEventListener;
 import java.util.HashMap;
 import java.util.Map;
+import org.json.JSONException;
+import org.json.JSONObject;
 import com.rex.db.node.example.R;
 
 public class MainActivity extends Activity {
@@ -30,27 +33,32 @@ public class MainActivity extends Activity {
 		final Button button1 = (Button) findViewById(R.id.button1);
 		final Button button2 = (Button) findViewById(R.id.button2);
 		final Button button3 = (Button) findViewById(R.id.button3);
+		final Button button4 = (Button) findViewById(R.id.button4);
 		NodeApp.initialize(this);
 
-		dB = new NodeDB("users").reverseOrder();
+		dB = new NodeDB("users").setDesc(true);
 		dB.addQueryEventListener(eventListener);
+		dB.addValueEventListener(eventListener2);
+		button1.setText("Update");
 		button1.setOnClickListener((v) -> {
-			HashMap<String, Object> map = new HashMap<>();
-			map.put("name", value.getText().toString());
-			map.put("job", "Manager");
-			map.put("age", key.getText().toString());
-			dB.put(map).prepare().push();
-			map.clear();
+			NodeObject ob = new NodeObject();
+			ob.updateObject("name", value.getText().toString());
+			dB.child(key.getText().toString()).update(ob).push();
 		});
-
+		button2.setText("Add");
 		button2.setOnClickListener((v) -> {
-			dB.put("name", "John Doe");
-			dB.put("job", "CEO");
-			dB.put(key.getText().toString(), value.getText().toString()).prepare().push();
+			NodeObject obj = new NodeObject();
+			obj.putObject(key.getText().toString(), value.getText().toString());
+			dB.put(obj).prepare().push();
 		});
-
+		button3.setText("Remove");
 		button3.setOnClickListener((v) -> {
 			dB.child(key.getText().toString()).remove();
+		});
+
+		button4.setText("Get");
+		button4.setOnClickListener((v) -> {
+			dB.child(key.getText().toString()).get();
 		});
 	}
 
