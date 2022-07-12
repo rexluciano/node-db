@@ -43,7 +43,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.rex.db.node'
                 artifactId = 'NodeDB'
-                version = '1.0.3-beta'
+                version = '1.0.4-beta'
             }
         }
     }
