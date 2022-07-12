@@ -1,4 +1,6 @@
 # NodeDB - Android based NoSQL Database
+[![](https://jitpack.io/v/rexllc/node-db.svg)](https://jitpack.io/#rexllc/node-db)
+
 A NoSQL Android Database system that aims to be a fast, and lightweight SQL library for Android.
 
 ## NodeDB Android
