@@ -36,6 +36,7 @@ public class NodeDB {
 	private HashMap<String, Object> map = new HashMap<>();
 	private JSONObject object = new JSONObject();
 	private JSONObject data = new JSONObject();
+	private JSONArray array = new JSONArray();
 
 	private QueryEventListener listener = null;
 	private QueryEventListener mListener = null;
@@ -65,34 +66,34 @@ public class NodeDB {
 	}
 
 	public NodeDB put(String key, Object value) {
-		try {
-			if (!id.trim().equalsIgnoreCase("")) {
-				data.put(key, value);
-				object.put(id, data);
-			} else {
-				object.put(getKey(), map);
-			}
-		} catch (JSONException e) {
-		}
-		list.add(object);
-		q.setData(list);
+		map.put(key, value);
 		return this;
 	}
 
-	public NodeDB put(Object hashMap) {
+	public NodeDB put(HashMap<String, Object> hashMap) {
+		if (hashMap.containsKey("id")) {
+			hashMap.remove("id");
+		}
+		map.putAll(hashMap);
+		return this;
+	}
+
+	public NodeDB prepare() {
+		HashMap<String, Object> map2 = new HashMap<>();
 		try {
 			if (!id.trim().equalsIgnoreCase("")) {
-				object.put(id, new JSONObject((Map) hashMap));
+				map2.put("id", id);
 			} else {
-				object.put(getKey(), new JSONObject((Map) hashMap));
+				map2.put("id", getKey());
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			qe.setError(e.getLocalizedMessage());
 			if (listener != null) {
 				listener.onError(qe);
 			}
 		}
-		list.add(object);
+		map2.putAll(map);
+		list.add(map2);
 		q.setData(list);
 		return this;
 	}
@@ -101,7 +102,7 @@ public class NodeDB {
 		JSONObject output = new JSONObject();
 		JSONArray jSONArray = new JSONArray(list);
 		try {
-			output.put("nodes", jSONArray);
+			output.put(nodeName.replace("", "").trim(), jSONArray);
 			FileUtil.writeFile(NodeApp.getPath().toString() + "/" + nodeName + ".node", output.toString());
 			list.clear();
 			refresh();
@@ -114,9 +115,6 @@ public class NodeDB {
 				listener.onError(qe);
 			}
 		}
-		if (list.contains(id)) {
-			list.remove(id);
-		}
 		map.clear();
 		return this;
 	}
@@ -124,7 +122,7 @@ public class NodeDB {
 	private void refresh() {
 		try {
 			JSONObject input = new JSONObject(FileUtil.readFile(dbPath.getAbsolutePath()));
-			JSONArray jsonArray = input.getJSONArray("nodes");
+			JSONArray jsonArray = input.getJSONArray(nodeName.replace("", "").trim());
 			list.clear();
 			for (int i = 0; i < jsonArray.length(); i++) {
 				list.add(jsonArray.get(i));
@@ -137,7 +135,7 @@ public class NodeDB {
 		}
 	}
 
-	public NodeDB query() {
+	protected NodeDB query() {
 		try {
 			q.setData(list);
 			if (listener != null) {
@@ -158,9 +156,8 @@ public class NodeDB {
 	}
 
 	public NodeDB get() {
-		HashMap<String, Object> map = new HashMap<>();
 		try {
-			JSONObject jSONObject = new JSONObject(list.get(list.indexOf(id)).toString());
+			JSONObject jSONObject = new JSONObject(list.get(Utils.getIndexOf(list, id)).toString());
 			q2.setData(jSONObject);
 			if (mListener != null) {
 				mListener.onQuery(q2);
@@ -174,7 +171,7 @@ public class NodeDB {
 		return this;
 	}
 
-	public NodeDB orderByKey() {
+	public NodeDB reverseOrder() {
 		Collections.reverse(list);
 		return this;
 	}
@@ -193,43 +190,56 @@ public class NodeDB {
 		return this;
 	}
 
+    @SuppressWarnings("Depreciated")
 	public void remove(String value) {
 		list.remove(value);
 		push().refresh();
 	}
 
 	public void remove() {
-		list.remove(id);
-		push().refresh();
+		if (Utils.getIndexOf(list, id) != -1) {
+			list.remove(Utils.getIndexOf(list, id));
+			push().refresh();
+		} else {
+			qe.setError("Data doesn\'t exist at the table.");
+			if (listener != null) {
+				listener.onError(qe);
+			}
+		}
 	}
 
 	public void update(String key, String value) {
-		map.put(key, value);
 		try {
-			object.put(id, map);
-		} catch (JSONException e) {
+			if (key.equals("id")) {
+				map.put("id", value.replace(value, id));
+			} else {
+				map.put("id", id);
+			}
+		} catch (Exception e) {
 			qe.setError(e.getLocalizedMessage());
 			if (listener != null) {
 				listener.onError(qe);
 			}
 		}
+		map.put(key, value);
 		push().refresh();
 	}
 
-	public void update(HashMap<String, Object> map) {
-		try {
-			object.put(id, map);
-		} catch (JSONException e) {
-			qe.setError(e.getLocalizedMessage());
-			if (listener != null) {
-				listener.onError(qe);
-			}
+	public void update(HashMap<String, Object> map2) {
+		if (map2.containsKey("id")) {
+			map2.remove("id");
 		}
+		map.put("id", id);
+		map.putAll(map2);
 		push().refresh();
 	}
 
 	public void delete() {
 		FileUtil.deleteFile(NodeApp.getPath().toString() + "/" + nodeName + ".node");
+		q.setData(list);
+		if (listener != null) {
+			listener.onQuery(q);
+		}
 	}
 
 	public void addQueryEventListener(QueryEventListener mQuery) {
