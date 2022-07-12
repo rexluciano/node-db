@@ -32,8 +32,7 @@ android {
 }
 
 dependencies {
-     // depreciated
-	// implementation 'com.google.code.gson:gson:2.9.0'
+     // No dependency needed
 }
 
 afterEvaluate {
@@ -43,7 +42,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.rex.db.node'
                 artifactId = 'NodeDB'
-                version = '1.0.4-beta'
+                version = '1.0.5-beta'
             }
         }
     }
