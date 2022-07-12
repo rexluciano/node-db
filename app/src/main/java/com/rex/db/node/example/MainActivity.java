@@ -13,7 +13,6 @@ import com.rex.db.node.query.Query;
 import com.rex.db.node.listener.QueryEventListener;
 import java.util.HashMap;
 import java.util.Map;
-import org.json.JSONObject;
 import com.rex.db.node.example.R;
 
 public class MainActivity extends Activity {
@@ -33,23 +32,25 @@ public class MainActivity extends Activity {
 		final Button button3 = (Button) findViewById(R.id.button3);
 		NodeApp.initialize(this);
 
-		dB = new NodeDB("users").orderByKey();
+		dB = new NodeDB("users").reverseOrder();
 		dB.addQueryEventListener(eventListener);
 		button1.setOnClickListener((v) -> {
 			HashMap<String, Object> map = new HashMap<>();
-			map.put("id", dB.getKey());
 			map.put("name", value.getText().toString());
+			map.put("job", "Manager");
 			map.put("age", key.getText().toString());
-			dB.child(map.get("id").toString()).put(map).push();
+			dB.put(map).prepare().push();
 			map.clear();
 		});
 
 		button2.setOnClickListener((v) -> {
-			
+			dB.put("name", "John Doe");
+			dB.put("job", "CEO");
+			dB.put(key.getText().toString(), value.getText().toString()).prepare().push();
 		});
 
 		button3.setOnClickListener((v) -> {
-			dB.delete();
+			dB.child(key.getText().toString()).remove();
 		});
 	}
 
