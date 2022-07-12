@@ -48,6 +48,10 @@ public class NodeDB {
 	public NodeDB(String nodeName) {
 		this.nodeName = nodeName;
 		printer = new LogPrinter(Log.DEBUG, "logs");
+		init();
+	}
+
+	protected void init() {
 		if (NodeApp.getContext() != null) {
 			dbPath = new File(NodeApp.getPath().toString() + "/" + nodeName + ".node");
 			if (dbPath.exists()) {
@@ -62,7 +66,7 @@ public class NodeDB {
 			}
 		} else {
 			throw new NullPointerException(
-					"You must called NodeApp.initialize(Context) first before calling any NodeDB query.");
+					"You must called NodeApp.initialize(Context) first before performing any NodeDB queries.");
 		}
 	}
 
@@ -111,6 +115,7 @@ public class NodeDB {
 			output.put(nodeName.replace("", "").trim(), jSONArray);
 			FileUtil.writeFile(NodeApp.getPath().toString() + "/" + nodeName + ".node", output.toString());
 			list.clear();
+			listStr.clear();
 			refresh();
 			if (listener != null) {
 				listener.onQuery(q);
@@ -130,6 +135,7 @@ public class NodeDB {
 			JSONObject input = new JSONObject(FileUtil.readFile(dbPath.getAbsolutePath()));
 			JSONArray jsonArray = input.getJSONArray(nodeName.replace("", "").trim());
 			list.clear();
+			listStr.clear();
 			for (int i = 0; i < jsonArray.length(); i++) {
 				JSONObject ob1 = jsonArray.getJSONObject(i);
 				list.add(jsonArray.get(i));
@@ -177,7 +183,7 @@ public class NodeDB {
 				mListener.onQuery(q2);
 			}
 		} catch (Exception e) {
-			qe.setError("Specified key is not found.");
+			qe.setError("Requested value doesn/'t exist.");
 			if (mListener != null) {
 				mListener.onError(qe);
 			}
@@ -212,7 +218,7 @@ public class NodeDB {
 			list.add(array2.toString());
 			push().refresh();
 		} catch (JSONException e) {
-			qe.setError("Requested value doesn\'t exist at the table.");
+			qe.setError("Requested value doesn\'t exist.");
 			if (listener != null) {
 				listener.onError(qe);
 			}
@@ -224,7 +230,7 @@ public class NodeDB {
 			list.remove(Utils.getIndexOf(listStr, id));
 			push().refresh();
 		} else {
-			qe.setError("Requested value doesn\'t exist at the table.");
+			qe.setError("Requested value doesn\'t exist.");
 			if (listener != null) {
 				listener.onError(qe);
 			}
