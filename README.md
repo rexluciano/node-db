@@ -7,7 +7,7 @@ Add NodeDB dependency into your build.gradle
 ```
 dependencies {
 
-	     implementation 'com.github.rexllc:node-db:1.0.4-beta'
+	     implementation 'com.github.rexllc:node-db:1.0.3-beta'
 
 	}
 ```
@@ -56,7 +56,7 @@ eventListener = new QueryEventListener() {
      @Override
      public void onQuery(Query query) {
        //For getting single value
-       Map map = (Map) query.getData();
+       Map<String, Object> map = (Map) query.getData();
        //For getting all list.
        String  list = query.getQuery().toString();
      }
@@ -83,11 +83,11 @@ db.child(id).remove();
 ```
 ## Updating data
 ```
-db.child(id).update(map).prepare().push();
-```
-## Or
-```
-db.child(id).update("name", "John").prepare().push();
+NodeObject nodeObject = new NodeObject();
+nodeObject.put("key", "value");
+nodeObject.put("key", "value");
+nodeObject.put("key", "value");
+db.child(id).update(nodeObject).push();
 ```
 ## Delete your database
 NodeDB have special method that when you call it will delete your current database instantly.
