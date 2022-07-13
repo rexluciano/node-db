@@ -1,6 +1,7 @@
 package com.rex.db.node.example;
 
 import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -8,7 +9,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.rex.db.node.NodeApp;
 import com.rex.db.node.NodeDB;
-import com.rex.db.node.NodeObject;
+import com.rex.db.node.listener.ValueEventListener;
 import com.rex.db.node.query.QueryError;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.listener.QueryEventListener;
@@ -18,9 +19,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import com.rex.db.node.example.R;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements QueryEventListener, ValueEventListener {
 
-	private NodeDB dB;
+	private NodeDB dB = NodeDB.getInstance().getDatabase("pornstars");
 	private TextView textView;
 
 	@Override
@@ -34,22 +35,21 @@ public class MainActivity extends Activity {
 		final Button button2 = (Button) findViewById(R.id.button2);
 		final Button button3 = (Button) findViewById(R.id.button3);
 		final Button button4 = (Button) findViewById(R.id.button4);
-		NodeApp.initialize(this);
 
-		dB = new NodeDB("users").setDesc(true);
-		dB.addQueryEventListener(eventListener);
-		dB.addValueEventListener(eventListener2);
+		dB.create().table("names").isDesc(true).build();
+		dB.addQueryEventListener(this);
+		dB.addValueEventListener(this);
 		button1.setText("Update");
 		button1.setOnClickListener((v) -> {
 			NodeObject ob = new NodeObject();
 			ob.updateObject("name", value.getText().toString());
-			dB.child(key.getText().toString()).update(ob).push();
+			dB.child(key.getText().toString()).update(ob).insert();
 		});
 		button2.setText("Add");
 		button2.setOnClickListener((v) -> {
 			NodeObject obj = new NodeObject();
-			obj.putObject(key.getText().toString(), value.getText().toString());
-			dB.put(obj).prepare().push();
+			obj.putObject("name", value.getText().toString());
+			dB.put(obj).table(key.getText().toString()).prepare().insert();
 		});
 		button3.setText("Remove");
 		button3.setOnClickListener((v) -> {
@@ -62,32 +62,20 @@ public class MainActivity extends Activity {
 		});
 	}
 
-	private QueryEventListener eventListener = new QueryEventListener() {
-		@Override
-		public void onQuery(Query q) {
+	@Override
+	public void onQuery(Query q) {
+		if (q.getData() != null) {
+			Map map = (Map) q.getData();
+			textView.setText(map.get("name").toString());
+			Toast.makeText(MainActivity.this, "Record retreived.", Toast.LENGTH_LONG).show();
+		} else if (q.getQuery() != null) {
 			Toast.makeText(MainActivity.this, "New record added.", Toast.LENGTH_LONG).show();
 			textView.setText(q.getQuery().toString());
 		}
+	}
 
-		@Override
-		public void onError(QueryError e) {
-			Toast.makeText(MainActivity.this, "Query : " + e.toString(), Toast.LENGTH_LONG).show();
-		}
-
-	};
-
-	private QueryEventListener eventListener2 = new QueryEventListener() {
-		@Override
-		public void onQuery(Query query) {
-			Map map = (Map) query.getData();
-			textView.setText(map.get("name").toString());
-			Toast.makeText(MainActivity.this, "Record retreived.", Toast.LENGTH_LONG).show();
-		}
-
-		@Override
-		public void onError(QueryError e) {
-			Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_LONG).show();
-		}
-
-	};
-};
+	@Override
+	public void onError(QueryError e) {
+		Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_LONG).show();
+	}
+}
