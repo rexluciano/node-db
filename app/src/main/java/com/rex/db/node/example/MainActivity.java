@@ -9,6 +9,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.rex.db.node.NodeApp;
 import com.rex.db.node.NodeDB;
+import com.rex.db.node.NodeObject;
 import com.rex.db.node.listener.ValueEventListener;
 import com.rex.db.node.query.QueryError;
 import com.rex.db.node.query.Query;
