@@ -1,9 +1,15 @@
 package com.rex.db.node.utils;
 
+import android.text.TextUtils;
+import android.util.Base64;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -61,6 +67,54 @@ public class Utils {
 		}
 		return list;
 
+	}
+
+	public static String encrypt(String key, String value) {
+		try {
+			SecretKey sckey = generateKey(key);
+			Cipher c = Cipher.getInstance("AES");
+			c.init(Cipher.ENCRYPT_MODE, sckey);
+			byte[] encVal = c.doFinal(value.getBytes());
+			return Base64.encodeToString(encVal, Base64.DEFAULT);
+		} catch (Exception ex) {
+			return value;
+		}
+	}
+
+	public static String decrypt(String key, String value) {
+		try {
+			SecretKeySpec sckey = (SecretKeySpec) generateKey("key");
+			Cipher c = Cipher.getInstance("AES");
+			c.init(Cipher.DECRYPT_MODE, sckey);
+			byte[] decode = Base64.decode(value, Base64.DEFAULT);
+			byte[] decval = c.doFinal(decode);
+			return new String(decval);
+		} catch (Exception ex) {
+			return value;
+		}
+	}
+
+	protected static SecretKey generateKey(String pwd) throws Exception {
+
+		final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+		byte[] b = pwd.getBytes("UTF-8");
+
+		digest.update(b, 0, b.length);
+
+		byte[] key = digest.digest();
+
+		SecretKeySpec sec = new SecretKeySpec(key, "AES");
+
+		return sec;
+
+	}
+	
+	public static boolean isEmpty(String str) {
+		if (TextUtils.isEmpty(str)) {
+			return true;
+		}
+		return false;
 	}
 
 }
