@@ -1,16 +1,19 @@
 package com.rex.db.node;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.util.LogPrinter;
 import com.rex.db.node.listener.QueryEventListener;
+import com.rex.db.node.listener.ValueEventListener;
 import com.rex.db.node.query.Query;
 import com.rex.db.node.query.QueryError;
 import com.rex.db.node.utils.FileUtil;
 import com.rex.db.node.utils.Utils;
 import java.io.File;
 import com.rex.db.node.NodeApp;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,9 +31,11 @@ public class NodeDB {
 	private String nodeName;
 	private String name;
 	private String id = "";
-	private File dbPath;
 	private LogPrinter printer;
 	private boolean isDescending;
+	private String tableName;
+	private static String dbName;
+	private String pathName;
 
 	private ArrayList<Object> list = new ArrayList<>();
 	private List<String> listStr = new ArrayList<>();
@@ -40,34 +45,59 @@ public class NodeDB {
 	private JSONArray array = new JSONArray();
 
 	private QueryEventListener listener = null;
-	private QueryEventListener mListener = null;
+	private ValueEventListener mListener = null;
 	private Query q = new Query();
 	private Query q2 = new Query();
 	private QueryError qe = new QueryError();
 
-	public NodeDB(String nodeName) {
-		this.nodeName = nodeName;
+	private static NodeDB mInstance;
+
+	protected NodeDB() {
 		printer = new LogPrinter(Log.DEBUG, "logs");
+	}
+
+	public static NodeDB getInstance() {
+		if (mInstance == null) {
+			mInstance = new NodeDB();
+		}
+		return mInstance;
+	}
+
+	public NodeDB create() {
+		if (Utils.isEmpty(dbName))
+			throw new NullPointerException("You must set a database name first!");
+		if (NodeApp.getPath() == null)
+			throw new NullPointerException("Invalid directory or access denied.");
+		return this;
+	}
+
+	public NodeDB build() {
 		init();
+		return this;
 	}
 
 	protected void init() {
 		if (NodeApp.getContext() != null) {
-			dbPath = new File(NodeApp.getPath().toString() + "/" + nodeName + ".node");
-			if (dbPath.exists()) {
-				try {
-					refresh();
-					new Handler(Looper.getMainLooper()).postDelayed(() -> query(), 200);
-				} catch (Exception exception) {
-					printer.println("NodeDB : " + exception.getLocalizedMessage());
-				}
+			if (!Utils.isEmpty(dbName)) {
+				refresh();
+				new Handler(Looper.getMainLooper()).postDelayed(() -> read(), 200);
 			} else {
-				printer.println("NodeDB : database path not yet created");
+				printer.println("NodeDB Error : No database has found.");
 			}
 		} else {
 			throw new NullPointerException(
 					"You must called NodeApp.initialize(Context) first before performing any NodeDB queries.");
 		}
+	}
+
+	public NodeDB table(String tbleName) {
+		this.tableName = tbleName;
+		return this;
+	}
+
+	public NodeDB getDatabase(String name) {
+		dbName = name;
+		return this;
 	}
 
 	public NodeDB put(String key, Object value) {
@@ -91,7 +121,7 @@ public class NodeDB {
 	public NodeDB prepare() {
 		HashMap<String, Object> map2 = new HashMap<>();
 		try {
-			if (!id.trim().equalsIgnoreCase("")) {
+			if (id != null && !id.trim().equalsIgnoreCase("")) {
 				map2.put("id", id);
 			} else {
 				map2.put("id", getKey());
@@ -103,23 +133,34 @@ public class NodeDB {
 			}
 		}
 		map2.putAll(map);
-		list.add(map2);
+		if (isExistTable(tableName.trim())) {
+			list.clear();
+			listStr.clear();
+			refresh();
+			list.add(map2);
+		} else {
+			list.clear();
+			listStr.clear();
+			list.add(map2);
+		}
 		q.setData(list);
 		return this;
 	}
 
-	public NodeDB push() {
+	public NodeDB insert() {
 		JSONObject output = new JSONObject();
 		JSONArray jSONArray = new JSONArray(list);
 		try {
-			output.put(nodeName.replace("", "").trim(), jSONArray);
-			FileUtil.writeFile(NodeApp.getPath().toString() + "/" + nodeName + ".node", output.toString());
-			list.clear();
-			listStr.clear();
-			refresh();
+			output.put(tableName.replace("", "").trim(), jSONArray);
+			FileUtil.writeFile(
+					NodeApp.getPath().toString() + "/" + dbName + File.separator + tableName + "/" + "1.node",
+					new JSONObject(output.toString()).toString(4));
 			if (listener != null) {
 				listener.onQuery(q);
 			}
+			list.clear();
+			listStr.clear();
+			refresh();
 		} catch (JSONException e) {
 			qe.setError(e.getLocalizedMessage());
 			if (listener != null) {
@@ -130,10 +171,24 @@ public class NodeDB {
 		return this;
 	}
 
+	protected boolean isExistTable(String table) {
+		try {
+			JSONObject input = new JSONObject(FileUtil.readFile(
+					NodeApp.getPath().toString() + "/" + dbName + File.separator + tableName + "/" + "1.node"));
+			JSONArray jsonArray = input.getJSONArray(table.replace("", "").trim());
+			if (input.has(table.replace("", "").trim()))
+				return true;
+		} catch (JSONException e) {
+			return false;
+		}
+		return false;
+	}
+
 	private void refresh() {
 		try {
-			JSONObject input = new JSONObject(FileUtil.readFile(dbPath.getAbsolutePath()));
-			JSONArray jsonArray = input.getJSONArray(nodeName.replace("", "").trim());
+			JSONObject input = new JSONObject(FileUtil.readFile(
+					NodeApp.getPath().toString() + "/" + dbName + File.separator + tableName + "/" + "1.node"));
+			JSONArray jsonArray = input.getJSONArray(tableName.replace("", "").trim());
 			list.clear();
 			listStr.clear();
 			for (int i = 0; i < jsonArray.length(); i++) {
@@ -149,7 +204,7 @@ public class NodeDB {
 		}
 	}
 
-	protected NodeDB query() {
+	protected void read() {
 		try {
 			if (isDescending) {
 				Collections.reverse(list);
@@ -166,7 +221,6 @@ public class NodeDB {
 				listener.onError(qe);
 			}
 		}
-		return this;
 	}
 
 	public int size() {
@@ -191,14 +245,13 @@ public class NodeDB {
 		return this;
 	}
 
-	public NodeDB setDesc(boolean value) {
+	public NodeDB isDesc(boolean value) {
 		this.isDescending = value;
 		return this;
 	}
 
 	public String getKey() {
-		this.id = Utils.generateKey(7);
-		return id;
+		return Utils.generateKey(7);
 	}
 
 	public String toString() {
@@ -216,7 +269,7 @@ public class NodeDB {
 			JSONObject ub = array2.getJSONObject(Utils.getIndexOf(listStr, id));
 			ub.remove(key);
 			list.add(array2.toString());
-			push().refresh();
+			insert().refresh();
 		} catch (JSONException e) {
 			qe.setError("Requested value doesn\'t exist.");
 			if (listener != null) {
@@ -228,7 +281,7 @@ public class NodeDB {
 	public void remove() {
 		if (Utils.getIndexOf(listStr, id) != -1) {
 			list.remove(Utils.getIndexOf(listStr, id));
-			push().refresh();
+			insert().refresh();
 		} else {
 			qe.setError("Requested value doesn\'t exist.");
 			if (listener != null) {
@@ -249,7 +302,7 @@ public class NodeDB {
 	}
 
 	public void delete() {
-		FileUtil.deleteFile(NodeApp.getPath().toString() + "/" + nodeName + ".node");
+		FileUtil.deleteFile(NodeApp.getPath().toString() + "/" + dbName + ".node");
 		q.setData(list);
 		if (listener != null) {
 			listener.onQuery(q);
@@ -260,7 +313,7 @@ public class NodeDB {
 		this.listener = mQuery;
 	}
 
-	public void addValueEventListener(QueryEventListener mQuery) {
+	public void addValueEventListener(ValueEventListener mQuery) {
 		this.mListener = mQuery;
 	}
 

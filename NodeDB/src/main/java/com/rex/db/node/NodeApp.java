@@ -1,5 +1,6 @@
 package com.rex.db.node;
 
+import android.app.Application;
 import android.content.Context;
 import com.rex.db.node.utils.FileUtil;
 import java.io.File;
@@ -8,12 +9,13 @@ public class NodeApp {
 
 	private static Context context;
 	private static File dbPath;
+	private boolean isInt;
 
 	private static NodeApp mInstance;
 
 	protected NodeApp(Context mContext) {
 		context = mContext;
-		dbPath = new File(context.getFilesDir().getPath(), "node_database");
+		dbPath = getPath();
 		init();
 	}
 
@@ -29,10 +31,10 @@ public class NodeApp {
 	}
 
 	public static File getPath() {
-		return dbPath;
+		return new File(context.getFilesDir().getPath(), "node_database");
 	}
 
-	protected void init() {
+	private void init() {
 		if (context != null) {
 			if (!dbPath.exists()) {
 				dbPath.mkdir();
